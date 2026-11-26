@@ -142,8 +142,22 @@ visitor-photo-slideshow/
 │       └── slideshow.js           # Fullscreen, autoplay, keyboard navigation
 │
 ├── database/
-│   ├── schema.sql                 # MySQL DDL (tables, foreign keys, indexes)
-│   └── seed.sql                   # Default admin user & slideshow settings
+│   ├── schema.sql                 # MySQL DDL (tables, unique email, foreign keys)
+│   ├── seed.sql                   # Default admin user & slideshow settings
+│   └── migrate_unique_email.php   # Safe CLI-only database migration script
+│
+├── tests/
+│   ├── run_all_tests.php          # Master automated test suite runner (10 suites)
+│   ├── test_database.php          # Database connectivity & schema integrity
+│   ├── test_validation.php        # Input, MIME spoofing, and oversized upload tests
+│   ├── test_visitor_workflow.php  # Registration, auth, upload, and consent tests
+│   ├── test_admin.php             # Admin auth & photo approval/moderation tests
+│   ├── test_concurrency.php       # Multi-visitor concurrent upload tests
+│   ├── test_account_takeover_prevention.php # Account hijacking defense tests
+│   ├── test_admin_redirect_and_actions.php  # Open redirect & action handler tests
+│   ├── test_upload_hardening.php  # .htaccess script execution & browsing tests
+│   ├── test_slideshow_transition.php        # Slideshow queue state machine tests
+│   └── test_unique_visitor_email.php        # DB unique constraint enforcement tests
 │
 └── uploads/
     ├── .gitkeep                   # Ensures directory is tracked in Git
@@ -161,14 +175,14 @@ visitor-photo-slideshow/
 
 ### Automated Test Suite Execution
 
-The application comes with comprehensive automated test suites covering environment connectivity, input and MIME validation, concurrent multi-visitor uploads, returning visitor authentication, consent withdrawal, and admin moderation.
+The application comes with 10 comprehensive automated test suites covering environment connectivity, input and MIME validation, oversized upload rejection, concurrent multi-visitor uploads, returning visitor authentication, consent withdrawal, admin moderation & CSRF verification, open redirect defenses, uploads directory hardening, slideshow empty-queue state transitions, and database-level unique email constraints.
 
 To execute the entire test suite in your terminal:
 ```bash
 php tests/run_all_tests.php
 ```
 
-All 5 test suites will run and display a unified verification matrix.
+All 10 test suites will run and display a unified verification matrix. For detailed test cases and execution results, see [TESTING.md](TESTING.md).
 
 ---
 
