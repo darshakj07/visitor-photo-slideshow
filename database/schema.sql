@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS `visitors` (
     `access_pin_hash` VARCHAR(255) NULL,
     `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    INDEX `idx_email` (`email`),
+    UNIQUE KEY `idx_unique_email` (`email`),
     INDEX `idx_token_hash` (`token_hash`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

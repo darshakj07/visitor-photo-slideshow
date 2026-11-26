@@ -62,17 +62,45 @@ class SlideshowApp {
                 if (!isBackgroundPoll) {
                     this.photos = newPhotos;
                 } else {
-                    // Update photo queue dynamically without jarring the active slide
+                    const wasEmpty = this.photos.length === 0;
+                    const prevCount = this.photos.length;
                     const activePhotoId = this.photos[this.currentIndex]?.id;
+
                     this.photos = newPhotos;
 
-                    if (this.photos.length > 0) {
-                        this.hideEmptyState();
-                        // Find where the active photo is now
-                        const newIdx = this.photos.findIndex(p => p.id === activePhotoId);
-                        this.currentIndex = (newIdx !== -1) ? newIdx : 0;
-                    } else {
+                    if (this.photos.length === 0) {
+                        this.currentIndex = 0;
                         this.showEmptyState();
+                    } else if (wasEmpty) {
+                        // Transition from empty queue to populated queue
+                        this.hideEmptyState();
+                        this.showSlide(0);
+                        if (this.isPlaying) {
+                            this.startTimer();
+                        }
+                    } else {
+                        // Queue was already populated and remains populated
+                        this.hideEmptyState();
+                        const newIdx = this.photos.findIndex(p => p.id === activePhotoId);
+
+                        if (newIdx !== -1) {
+                            // Active slide still exists; preserve position and update HUD counter
+                            this.currentIndex = newIdx;
+                            if (this.slideCounter) {
+                                this.slideCounter.innerText = `${this.currentIndex + 1} / ${this.photos.length}`;
+                            }
+                            // If we transitioned from 1 photo to >1 photo and rotation wasn't running, start it
+                            if (prevCount <= 1 && this.photos.length > 1 && this.isPlaying && !this.timer) {
+                                this.startTimer();
+                            }
+                        } else {
+                            // Active slide was removed/unapproved; gracefully show slide at current boundary
+                            const fallbackIdx = (this.currentIndex < this.photos.length) ? this.currentIndex : 0;
+                            this.showSlide(fallbackIdx);
+                            if (this.isPlaying) {
+                                this.startTimer();
+                            }
+                        }
                     }
                 }
             }

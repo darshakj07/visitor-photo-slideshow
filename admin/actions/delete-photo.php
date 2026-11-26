@@ -16,7 +16,7 @@ requireAdminAuth();
 validateCsrfOrDie();
 
 $photoId = (int) ($_POST['photo_id'] ?? 0);
-$returnUrl = $_POST['return_url'] ?? (APP_URL . '/admin/photos.php');
+$returnUrl = validateAdminReturnUrl($_POST['return_url'] ?? null, APP_URL . '/admin/photos.php');
 
 if ($photoId > 0) {
     try {

@@ -58,6 +58,56 @@ if (!$res['valid'] && str_contains($res['errors'][0], 'maximum of 10 photos')) {
     exit(1);
 }
 
+// 4b. TC-VAL-01: File Size Thresholds (Oversized upload rejection & Valid size acceptance)
+// Configuration limit check
+$maxSizeBytes = MAX_FILE_SIZE_BYTES; // 10 * 1024 * 1024 = 10,485,760 bytes
+$maxSizeFormatted = formatBytes($maxSizeBytes);
+
+// Case A: File size exceeding limit by 1 byte (10,485,761 bytes)
+$oversizedFile = [
+    [
+        'name' => 'oversized_camera_raw.jpg',
+        'type' => 'image/jpeg',
+        'tmp_name' => sys_get_temp_dir() . DIRECTORY_SEPARATOR . 'oversized.jpg',
+        'error' => UPLOAD_ERR_OK,
+        'size' => $maxSizeBytes + 1, // 10MB + 1 byte
+    ]
+];
+$oversizedRes = validateUploadedFiles($oversizedFile);
+if (!$oversizedRes['valid'] && !empty($oversizedRes['errors']) && str_contains($oversizedRes['errors'][0], 'exceeds the maximum allowed size of 10 MB')) {
+    echo "[PASS] TC-VAL-01: Oversized upload exceeding 10 MB limit ({$maxSizeFormatted}) correctly rejected: {$oversizedRes['errors'][0]}" . PHP_EOL;
+} else {
+    echo "[FAIL] TC-VAL-01: Oversized upload was not properly rejected: " . json_encode($oversizedRes) . PHP_EOL;
+    exit(1);
+}
+
+// Case B: PHP INI / Form level oversized upload (UPLOAD_ERR_INI_SIZE / UPLOAD_ERR_FORM_SIZE)
+$iniOversizedFile = [
+    [
+        'name' => 'huge_video_disguised.jpg',
+        'type' => 'image/jpeg',
+        'tmp_name' => '',
+        'error' => UPLOAD_ERR_INI_SIZE,
+        'size' => 0,
+    ]
+];
+$iniRes = validateUploadedFiles($iniOversizedFile);
+if (!$iniRes['valid'] && !empty($iniRes['errors']) && str_contains($iniRes['errors'][0], 'exceeds server maximum upload size limit')) {
+    echo "[PASS] TC-VAL-01: Upload exceeding server INI/form size limit correctly rejected." . PHP_EOL;
+} else {
+    echo "[FAIL] TC-VAL-01: INI oversized error code was not properly caught: " . json_encode($iniRes) . PHP_EOL;
+    exit(1);
+}
+
+// Case C: Valid size threshold boundary (e.g. 5 MB) correctly passes size validation check
+$validSize = 5 * 1024 * 1024; // 5 MB
+if ($validSize <= MAX_FILE_SIZE_BYTES) {
+    echo "[PASS] TC-VAL-01: Legitimate 5 MB file size is within valid allowed limit (<= {$maxSizeFormatted})." . PHP_EOL;
+} else {
+    echo "[FAIL] TC-VAL-01: Valid 5 MB size check failed." . PHP_EOL;
+    exit(1);
+}
+
 // 5. TC-VAL-03: MIME Spoofing & Fake Graphic Bitmap Check
 $spoofFile = sys_get_temp_dir() . DIRECTORY_SEPARATOR . "fake_image.jpg";
 file_put_contents($spoofFile, "<?php echo 'malicious payload'; ?>");

@@ -16,6 +16,11 @@ $testFiles = [
     'test_visitor_workflow.php',
     'test_admin.php',
     'test_concurrency.php',
+    'test_account_takeover_prevention.php',
+    'test_admin_redirect_and_actions.php',
+    'test_upload_hardening.php',
+    'test_slideshow_transition.php',
+    'test_unique_visitor_email.php',
 ];
 
 $passedCount = 0;

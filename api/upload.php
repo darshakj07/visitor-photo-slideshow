@@ -59,6 +59,9 @@ try {
     // 4. Begin Atomic Database Transaction
     $db->beginTransaction();
 
+    // Check if requester is already authenticated in this session
+    $currentVisitor = getCurrentVisitor();
+
     // Check if visitor already exists by email
     $stmt = $db->prepare("SELECT id, name, email, token_hash, access_pin_hash FROM visitors WHERE email = ? LIMIT 1 FOR UPDATE");
     $stmt->execute([$email]);
@@ -68,19 +71,31 @@ try {
 
     if ($visitor) {
         $visitorId = (int) $visitor['id'];
-        // Update name and PIN if provided
-        $updateSql = "UPDATE visitors SET name = ?, updated_at = NOW()";
-        $params = [$name];
+        $isOwnerVerified = false;
 
-        if ($pin !== '') {
-            $updateSql .= ", access_pin_hash = ?";
-            $params[] = password_hash($pin, PASSWORD_BCRYPT);
+        // Verify ownership:
+        // Case 1: Requester is already logged in as this exact visitor
+        if ($currentVisitor && (int)$currentVisitor['id'] === $visitorId) {
+            $isOwnerVerified = true;
+        } elseif ($pin !== '' && !empty($visitor['access_pin_hash']) && password_verify($pin, $visitor['access_pin_hash'])) {
+            // Case 2: Unauthenticated requester provided matching PIN for this account
+            $isOwnerVerified = true;
+            loginVisitor($visitor);
         }
-        $updateSql .= " WHERE id = ?";
-        $params[] = $visitorId;
 
-        $updateStmt = $db->prepare($updateSql);
-        $updateStmt->execute($params);
+        // Reject if ownership cannot be proven (prevents account takeover)
+        if (!$isOwnerVerified) {
+            $db->rollBack();
+            jsonResponse([
+                'success'      => false,
+                'error'        => 'This email address is already registered. Please <a href="' . APP_URL . '/visitor/access.php" class="alert-link">sign in with your Access Key or PIN</a> to manage or add photos.',
+                'redirect_url' => APP_URL . '/visitor/access.php',
+            ], 403);
+        }
+
+        // Ownership is verified: Never overwrite existing name, token, or PIN
+        $updateStmt = $db->prepare("UPDATE visitors SET updated_at = NOW() WHERE id = ?");
+        $updateStmt->execute([$visitorId]);
     } else {
         // Create new visitor with high-entropy token
         $plaintextToken = generateVisitorToken();
@@ -173,6 +188,16 @@ try {
         if (file_exists($filepath)) {
             @unlink($filepath);
         }
+    }
+
+    // Check for duplicate email database constraint violation (SQLSTATE 23000 / MySQL error 1062)
+    if ($e instanceof PDOException && ($e->getCode() === '23000' || (isset($e->errorInfo[1]) && $e->errorInfo[1] === 1062))) {
+        error_log("Duplicate visitor registration caught by database constraint for email: {$email}");
+        jsonResponse([
+            'success'      => false,
+            'error'        => 'This email address is already registered. Please <a href="' . APP_URL . '/visitor/access.php" class="alert-link">sign in with your Access Key or PIN</a> to manage or add photos.',
+            'redirect_url' => APP_URL . '/visitor/access.php',
+        ], 409);
     }
 
     error_log("Upload processing failure: " . $e->getMessage());

@@ -1,18 +1,52 @@
-# Security: Prevent execution of any scripts in the uploads directory
-<FilesMatch "\.(php|phtml|php3|php4|php5|php7|phps|cgi|pl|py|sh|bash|exe)$">
-    Order Deny,Allow
-    Deny from all
-</FilesMatch>
+# ==============================================================================
+# Security Hardening for Uploads Directory
+# VISITOR PHOTO SLIDESHOW - Core PHP & Apache 2.4+
+# ==============================================================================
 
-# Disable PHP engine if mod_php is loaded
+# 1. Disable directory browsing and CGI execution
+Options -Indexes -ExecCGI
+
+# 2. Disable PHP engine across mod_php modules (PHP 5, 7, 8, and custom variants)
+<IfModule mod_php5.c>
+    php_flag engine off
+</IfModule>
 <IfModule mod_php7.c>
     php_flag engine off
 </IfModule>
 <IfModule mod_php8.c>
     php_flag engine off
 </IfModule>
-
-# Force default handler for images
-<IfModule mod_mime.c>
-    RemoveHandler .php .phtml .php3 .php4 .php5 .php7
+<IfModule mod_phpx.c>
+    php_flag engine off
 </IfModule>
+
+# 3. Strip all script handlers and MIME types
+<IfModule mod_mime.c>
+    RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phps .phar .cgi .pl .py .sh .bash .exe .bat .cmd
+    RemoveType .php .phtml .php3 .php4 .php5 .php7 .phps .phar
+</IfModule>
+
+# 4. Force default static handler for everything in this directory
+SetHandler default-handler
+
+# 5. Explicitly deny all executable scripts, server configurations, and sensitive files
+<FilesMatch "(?i:\.(php|phtml|php3|php4|php5|php7|phps|phar|cgi|pl|py|sh|bash|exe|bat|cmd|env|config|sql|htaccess))$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Deny,Allow
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
+# 6. Permit direct HTTP read access strictly to legitimate image formats
+<FilesMatch "(?i:\.(jpe?g|png|webp))$">
+    <IfModule mod_authz_core.c>
+        Require all granted
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Order Allow,Deny
+        Allow from all
+    </IfModule>
+</FilesMatch>

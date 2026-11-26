@@ -134,9 +134,14 @@ sequenceDiagram
    - Smooth 800ms CSS cross-fade transition between slides.
    - High-contrast HUD displaying slide progress, auto-play indicator, pause/resume toggle, and visitor attribution name (if consented).
 2. **Asynchronous Polling & Dynamic Updates:**
-   - Frontend polls `/api/slideshow.php?since=TIMESTAMP` every 30 seconds.
-   - When new approved photos from consented visitors are detected, they are inserted into the running queue without resetting the currently viewing slide.
-   - If a visitor withdraws consent or an admin hides a photo, the next poll cycle purges the item from the queue.
+   - The frontend slideshow engine periodically polls `/api/slideshow.php` (every 25 seconds) using `fetch('../api/slideshow.php', { cache: 'no-store' })`.
+   - The endpoint queries the database for all currently approved photos belonging to visitors with active consent (`is_approved = 1 AND consent_status = 'granted'`) and returns the complete, current playlist in JSON format.
+   - Upon receiving the updated playlist, `assets/js/slideshow.js` dynamically syncs its local queue:
+     - If the queue was empty, it hides the empty state, immediately displays the first photo, and starts the automatic rotation timer.
+     - If the slideshow is already running, it updates the total slide counter and preserves the currently displayed slide without resetting or interrupting the viewer's playback.
+     - If newly approved photos have arrived, they are seamlessly integrated into future rotation cycles.
+     - If a photo was unapproved or deleted, or if a visitor withdrew consent, the photo is automatically omitted from the queue on the next polling cycle, smoothly advancing or falling back to a valid slide.
+     - If all photos become unapproved or removed, the slideshow transitions back to the empty state and halts rotation timers.
 
 ---
 

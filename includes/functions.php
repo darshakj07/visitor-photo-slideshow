@@ -51,6 +51,93 @@ function redirect(string $url): void
 }
 
 /**
+ * Validate and sanitize an admin return URL to prevent Open Redirection.
+ * Strictly restricts destinations to known internal admin scripts (dashboard.php, photos.php, visitors.php)
+ * and permitted query parameters. Rejects external schemes, hosts, protocol-relative, and javascript URLs.
+ *
+ * @param string|null $url The user-submitted return URL
+ * @param string $default Safe fallback destination (defaults to admin photos page)
+ * @return string Safe, reconstructed internal admin URL
+ */
+function validateAdminReturnUrl(?string $url, string $default = ''): string
+{
+    $fallback = ($default !== '') ? $default : (APP_URL . '/admin/photos.php');
+
+    if ($url === null || trim($url) === '') {
+        return $fallback;
+    }
+
+    $raw = trim($url);
+
+    // 1. Block control characters, CR, LF (header injection / CRLF defense)
+    if (preg_match('/[\x00-\x1F\x7F]/', $raw)) {
+        return $fallback;
+    }
+
+    // 2. Block protocol-relative or backslash-prefixed URLs (//evil.example, /\evil.example, \\evil.example)
+    if (str_starts_with($raw, '//') || str_starts_with($raw, '/\\') || str_starts_with($raw, '\\\\')) {
+        return $fallback;
+    }
+
+    // 3. Block dangerous pseudo-protocols (javascript:, data:, vbscript:, file:)
+    if (preg_match('/^(javascript|data|vbscript|file):/i', $raw)) {
+        return $fallback;
+    }
+
+    $parsed = @parse_url($raw);
+    if ($parsed === false || !is_array($parsed)) {
+        return $fallback;
+    }
+
+    // 4. If scheme or host is present, it must strictly match the application host and scheme
+    if (isset($parsed['host'])) {
+        $appHost = (string) parse_url(APP_URL, PHP_URL_HOST);
+        $appPort = parse_url(APP_URL, PHP_URL_PORT);
+        $appScheme = (string) parse_url(APP_URL, PHP_URL_SCHEME);
+
+        if (strcasecmp($parsed['host'], $appHost) !== 0) {
+            return $fallback;
+        }
+
+        if (isset($parsed['scheme']) && strcasecmp($parsed['scheme'], $appScheme) !== 0) {
+            return $fallback;
+        }
+
+        if (isset($parsed['port']) && $appPort !== null && $parsed['port'] !== $appPort) {
+            return $fallback;
+        }
+    }
+
+    // 5. Validate the path component
+    $path = $parsed['path'] ?? '';
+    if ($path === '' || !str_contains($path, '/admin/')) {
+        return $fallback;
+    }
+
+    $scriptName = basename($path);
+    $allowedScripts = ['dashboard.php', 'photos.php', 'visitors.php'];
+    if (!in_array($scriptName, $allowedScripts, true)) {
+        return $fallback;
+    }
+
+    // 6. Reconstruct the verified internal URL
+    $cleanUrl = APP_URL . '/admin/' . $scriptName;
+
+    // 7. Validate and sanitize permitted query parameters (e.g. ?filter=all|approved|hidden)
+    if (!empty($parsed['query'])) {
+        parse_str($parsed['query'], $queryParams);
+        if (isset($queryParams['filter']) && is_string($queryParams['filter'])) {
+            $filter = strtolower(trim($queryParams['filter']));
+            if (in_array($filter, ['all', 'approved', 'hidden'], true)) {
+                $cleanUrl .= '?filter=' . urlencode($filter);
+            }
+        }
+    }
+
+    return $cleanUrl;
+}
+
+/**
  * Set a session flash message
  */
 function setFlashMessage(string $type, string $message): void
