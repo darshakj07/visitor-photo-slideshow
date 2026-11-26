@@ -35,7 +35,9 @@ function hashVisitorToken(string $token): string
  */
 function loginVisitor(array $visitor, string $plaintextToken = ''): void
 {
-    session_regenerate_id(true);
+    if (!headers_sent() && session_status() === PHP_SESSION_ACTIVE) {
+        session_regenerate_id(true);
+    }
     $_SESSION['visitor_id'] = (int) $visitor['id'];
     $_SESSION['visitor_name'] = (string) $visitor['name'];
     $_SESSION['visitor_email'] = (string) $visitor['email'];
@@ -177,7 +179,9 @@ function attemptAdminLogin(string $username, string $password): bool
     $admin = $stmt->fetch();
 
     if ($admin && password_verify($password, $admin['password_hash'])) {
-        session_regenerate_id(true);
+        if (!headers_sent() && session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
         $_SESSION['admin_id'] = (int) $admin['id'];
         $_SESSION['admin_username'] = (string) $admin['username'];
         $_SESSION['admin_name'] = (string) $admin['name'];
