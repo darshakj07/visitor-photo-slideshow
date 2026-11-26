@@ -159,5 +159,60 @@ visitor-photo-slideshow/
 
 ---
 
+### Automated Test Suite Execution
+
+The application comes with comprehensive automated test suites covering environment connectivity, input and MIME validation, concurrent multi-visitor uploads, returning visitor authentication, consent withdrawal, and admin moderation.
+
+To execute the entire test suite in your terminal:
+```bash
+php tests/run_all_tests.php
+```
+
+All 5 test suites will run and display a unified verification matrix.
+
+---
+
+### Step-by-Step Live Demonstration Guide
+
+When presenting this application to your professor, follow this demonstration workflow:
+
+1. **Landing Page:**
+   - Navigate to `http://localhost/visitor-photo-slideshow/`.
+   - Highlight the modern digital guestbook UI, responsive layout, feature highlights, and privacy explanation.
+2. **Visitor Registration & Initial Upload:**
+   - Click **"Share Your Photos"**.
+   - Show that the consent checkbox is **unselected by default**.
+   - Enter Name (e.g., *Alex Morgan*), Email (`alex@example.com`), and an optional PIN (e.g., `123456`).
+   - Drag and drop 2-3 images. Point out the instant previews, file size badges, and individual removal buttons.
+   - Check the consent box and click **"Upload & Join Public Slideshow"**.
+3. **Public Slideshow:**
+   - Open `http://localhost/visitor-photo-slideshow/slideshow/index.php` in a separate window or tab.
+   - Demonstrate the automatic 8-second crossfade, ambient blurred backdrop, and attribution caption (*Photo by Alex Morgan*).
+   - Press **Space** to pause/resume, **Right/Left arrow keys** to change slides manually, and **F** for fullscreen TV mode.
+4. **Returning Visitor Identification & Consent Control:**
+   - Open `http://localhost/visitor-photo-slideshow/visitor/access.php`.
+   - Log in using Email (`alex@example.com`) and PIN (`123456`) or paste the Magic Access Key.
+   - In the **Visitor Dashboard**, demonstrate that previous photos are displayed.
+   - Click **"Withdraw Consent"**.
+   - Return to the Public Slideshow tab: within the next poll cycle, Alex's photos will automatically disappear from the live screen!
+   - Click **"Grant Consent"** to restore them to the live screen.
+5. **Host / Admin Panel & Moderation:**
+   - Navigate to `http://localhost/visitor-photo-slideshow/admin/login.php`.
+   - Log in with `admin` / `Admin@2026!`.
+   - Show the live dashboard metrics (Total Visitors, Uploads, Active Consents, Live on Screen).
+   - Under **Photo Moderation**, click **Hide** on a photo to take it off the slideshow, or **Delete** to unlink it from disk.
+   - Adjust the **Slide Duration** setting (e.g., from 8s to 5s) and click Save.
+
+---
+
+### Known Limitations
+
+1. **Email Delivery in Local XAMPP:**
+   - Local offline XAMPP environments typically lack an active outbound SMTP mail transport agent. Consequently, returning visitor identification is engineered using high-entropy cryptographic access tokens and access PINs rather than outbound email verification loops.
+2. **Slideshow Transition during Consent Withdrawal:**
+   - A photo currently being projected in an active slide will finish its current 8-second display before the asynchronous poll drops it from future queue rotations.
+
+---
+
 ### GitHub Repository
 - **Remote Origin:** `https://github.com/darshakj07/visitor-photo-slideshow`
