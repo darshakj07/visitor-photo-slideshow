@@ -94,7 +94,7 @@ This document defines the explicit assumptions, design choices, requirement clar
   1. **UUID/Cryptographic Filenames:** Every uploaded file receives a globally unique name using `random_bytes()`, guaranteeing zero disk collision during simultaneous writes.
   2. **Atomic Database Transactions:** Multi-file inserts execute inside a PDO transaction (`beginTransaction()`, `commit()`, `rollBack()`).
   3. **Rollback File Cleanup:** If any database insert fails during a multi-photo batch, all files moved to the upload directory for that request are immediately unlinked from disk before the transaction rolls back.
-  4. **Optimistic Slideshow Polling:** The public slideshow periodically requests updates using lightweight delta timestamps (`?since=...`) rather than re-fetching the entire photo archive repeatedly.
+  4. **Dynamic Playlist Polling:** The public slideshow periodically polls `/api/slideshow.php` (every 25 seconds) to fetch the complete, current approved playlist. The client-side slideshow engine reconciles changes dynamically, preserving the active slide during playback while seamlessly integrating new arrivals and dropping unapproved or withdrawn photos.
 
 ---
 
